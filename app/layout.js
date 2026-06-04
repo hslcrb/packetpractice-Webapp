@@ -1,8 +1,8 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "삼성 라이온즈 팬 대시보드",
-  description: "최강삼성 라이온즈 팬들을 위한 실시간 경기 데이터 대시보드",
+  title: "Cisco IOS 명령어 연습기 - 패킷 트레이서",
+  description: "정보기기운용기능사 및 네트워크 실습을 위한 인터랙티브 Cisco IOS 명령어 시뮬레이터",
   viewport: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0",
   icons: {
     icon: "/logo.svg",
