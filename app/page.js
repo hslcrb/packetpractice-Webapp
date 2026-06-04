@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { HomeIcon, MatchIcon, RankIcon, MoreIcon } from '../components/Icons';
-import { motion, AnimatePresence } from 'framer-motion';
 import PremiumButton from '../components/PremiumButton';
 
 // PC 설정 정답 상수
@@ -115,7 +114,7 @@ function normalizeCommand(cmd) {
     return temp;
   }
 
-  // name ... (대소문자가 섞일 수 있으므로 뒤의 이름은 그대로 살려둠)
+  // name ...
   let rawTrim = cmd.trim();
   let rawLower = rawTrim.toLowerCase();
   if (rawLower.startsWith('na ')) {
@@ -234,7 +233,6 @@ function normalizeCommand(cmd) {
 function getPrompt(mode, devName, cmdIndex, steps) {
   if (cmdIndex === 0) return `${devName}>`;
   
-  // 현재까지 완료된 명령들의 상태를 파악하여 프롬프트 결정
   let normalizedHistory = steps.slice(0, cmdIndex).map(s => s.normalized);
   
   let isConfig = false;
@@ -274,7 +272,7 @@ function getPrompt(mode, devName, cmdIndex, steps) {
 }
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState('home'); // home(PC), match(Switch), rank(Router), more(Info)
+  const [activeTab, setActiveTab] = useState('home');
   const [showDetails, setShowDetails] = useState(false);
 
   // PC 설정 상태
@@ -298,7 +296,6 @@ export default function Home() {
     { text: 'Router> (힌트: en 또는 enable을 입력해서 시작하셈)', type: 'system' }
   ]);
 
-  // 자동 스크롤을 위한 Ref
   const switchEndRef = useRef(null);
   const routerEndRef = useRef(null);
 
@@ -344,7 +341,7 @@ export default function Home() {
     }
   };
 
-  // PC 정답 자동입력(테스트용 편의기능)
+  // PC 정답 자동입력
   const autoFillPc = () => {
     setSalesConfig({
       ip: '100.0.0.1',
@@ -369,7 +366,6 @@ export default function Home() {
     const normalizedInput = normalizeCommand(rawInput);
     setSwitchCmd('');
 
-    // 이미 모든 단계를 클리어했을 경우
     if (switchStepIdx >= SWITCH_STEPS.length) {
       setSwitchHistory(prev => [
         ...prev,
@@ -382,7 +378,6 @@ export default function Home() {
     const currentPrompt = getPrompt('Switch', 'Switch', switchStepIdx, SWITCH_STEPS);
     const expected = SWITCH_STEPS[switchStepIdx];
 
-    // 정답 체크
     if (normalizedInput === expected.normalized) {
       const nextIdx = switchStepIdx + 1;
       const nextPrompt = getPrompt('Switch', 'Switch', nextIdx, SWITCH_STEPS);
@@ -442,7 +437,6 @@ export default function Home() {
     }
   };
 
-  // 퀵 버튼 클릭 핸들러
   const handleQuickClick = (text, tab) => {
     if (tab === 'switch') {
       setSwitchCmd(text);
@@ -453,7 +447,6 @@ export default function Home() {
 
   const renderContent = () => {
     switch (activeTab) {
-      // 1. PC 설정 탭
       case 'home':
         return (
           <div className="scroll-area animate-fade">
@@ -530,7 +523,6 @@ export default function Home() {
           </div>
         );
 
-      // 2. Switch 설정 탭
       case 'match':
         return (
           <div className="scroll-area animate-fade">
@@ -544,7 +536,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* 가이드 안내 상자 */}
             {switchStepIdx < SWITCH_STEPS.length ? (
               <div className="guide-box">
                 <h4>[다음 가이드]</h4>
@@ -557,7 +548,6 @@ export default function Home() {
               </div>
             )}
 
-            {/* 정갈한 흰색 배경 터미널 창 */}
             <div className="terminal-box">
               <div className="terminal-output">
                 {switchHistory.map((line, idx) => (
@@ -578,7 +568,6 @@ export default function Home() {
                   value={switchCmd}
                   onChange={e => setSwitchCmd(e.target.value)}
                   placeholder="명령어 입력..."
-                  autoFocus
                   autoComplete="off"
                   autoCorrect="off"
                   autoCapitalize="off"
@@ -587,7 +576,6 @@ export default function Home() {
               </form>
             </div>
 
-            {/* 모바일 퀵 키패드 */}
             {switchStepIdx < SWITCH_STEPS.length && (
               <div style={{ marginTop: '8px' }}>
                 <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#6b7280', display: 'block', marginBottom: '8px' }}>⚡ 모바일 퀵 패드 (터치하여 자동 입력)</span>
@@ -604,7 +592,6 @@ export default function Home() {
           </div>
         );
 
-      // 3. Router 설정 탭
       case 'rank':
         return (
           <div className="scroll-area animate-fade">
@@ -618,7 +605,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* 가이드 안내 상자 */}
             {routerStepIdx < ROUTER_STEPS.length ? (
               <div className="guide-box">
                 <h4>[다음 가이드]</h4>
@@ -631,7 +617,6 @@ export default function Home() {
               </div>
             )}
 
-            {/* 정갈한 흰색 배경 터미널 창 */}
             <div className="terminal-box">
               <div className="terminal-output">
                 {routerHistory.map((line, idx) => (
@@ -660,7 +645,6 @@ export default function Home() {
               </form>
             </div>
 
-            {/* 모바일 퀵 키패드 */}
             {routerStepIdx < ROUTER_STEPS.length && (
               <div style={{ marginTop: '8px' }}>
                 <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#6b7280', display: 'block', marginBottom: '8px' }}>⚡ 모바일 퀵 패드 (터치하여 자동 입력)</span>
@@ -677,7 +661,6 @@ export default function Home() {
           </div>
         );
 
-      // 4. 정보 및 설정 탭
       case 'more':
         const pcProgress = pcResult.success ? 100 : 0;
         const switchProgress = Math.round((switchStepIdx / SWITCH_STEPS.length) * 100);
@@ -782,7 +765,6 @@ export default function Home() {
     <div className="app-container">
       {renderContent()}
       
-      {/* 하단 탭 메뉴 */}
       <nav className="bottom-nav">
         {[
           { id: 'home', icon: <HomeIcon />, label: 'PC설정' },
@@ -801,60 +783,100 @@ export default function Home() {
         ))}
       </nav>
 
-      {/* 바텀 시트 상세 모달 */}
-      <AnimatePresence>
-        {showDetails && (
-          <>
-            <motion.div
-              className="modal-overlay"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+      {/* 바텀 시트 상세 모달 (순수 CSS 트랜지션 및 애니메이션 활용) */}
+      {showDetails && (
+        <>
+          <div
+            className="modal-overlay"
+            onClick={() => setShowDetails(false)}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              width: '100vw',
+              height: '100vh',
+              background: 'rgba(0,0,0,0.5)',
+              backdropFilter: 'blur(4px)',
+              zIndex: 1000
+            }}
+          />
+          <div
+            className="bottom-sheet"
+            style={{
+              height: '65vh',
+              position: 'fixed',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              maxWidth: '430px',
+              margin: '0 auto',
+              background: 'white',
+              borderRadius: '32px 32px 0 0',
+              zIndex: 1001,
+              padding: '12px 24px 40px',
+              boxShadow: '0 -10px 40px rgba(0, 0, 0, 0.15)',
+              overflow: 'hidden',
+              animation: 'slideUp 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards'
+            }}
+          >
+            <div 
+              className="sheet-handle" 
+              style={{
+                width: '36px',
+                height: '5px',
+                background: '#DDD',
+                borderRadius: '10px',
+                margin: '12px auto 24px',
+                cursor: 'pointer'
+              }}
               onClick={() => setShowDetails(false)}
             />
-            <motion.div
-              className="bottom-sheet"
-              initial={{ y: 800 }}
-              animate={{ y: 0 }}
-              exit={{ y: 800 }}
-              drag="y"
-              dragConstraints={{ top: 0, bottom: 600 }}
-              dragElastic={0}
-              onDragEnd={(e, info) => {
-                if (info.offset.y > 200 || info.velocity.y > 600) setShowDetails(false);
-              }}
-              transition={{ type: "spring", damping: 35, stiffness: 250 }}
-              style={{
-                height: '75vh',
-                position: 'fixed',
-                bottom: '-20vh',
-                zIndex: 1001,
-                background: 'white',
-                paddingBottom: '20vh'
-              }}
-            >
-              <div className="sheet-handle" />
-              <div className="sheet-content">
-                <h3 className="sheet-title" style={{ color: '#16a34a', fontWeight: '900' }}>Software Specifications</h3>
-                <div className="spec-list">
-                  <div className="spec-row"><span className="spec-label">Core Engine</span><span className="spec-value">Next.js v16.2.7</span></div>
-                  <div className="spec-row"><span className="spec-label">Base Font</span><span className="spec-value">에이투지체 (A2z)</span></div>
-                  <div className="spec-row"><span className="spec-label">Terminal Font</span><span className="spec-value">Consolas, monospace</span></div>
-                  <div className="spec-row"><span className="spec-label">Deployment</span><span className="spec-value">Vercel Edge</span></div>
-                  <div className="spec-row"><span className="spec-label">Developer</span><span className="spec-value">Rhee Hose (이호세)</span></div>
-                  <div className="spec-row"><span className="spec-label">School</span><span className="spec-value">수원 한봄고등학교</span></div>
+            <div className="sheet-content">
+              <h3 className="sheet-title" style={{ color: '#16a34a', fontWeight: '900', textAlign: 'center', marginBottom: '20px' }}>Software Specifications</h3>
+              <div className="spec-list" style={{ background: '#F8F9FA', borderRadius: '20px', padding: '8px 20px' }}>
+                <div className="spec-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '16px 0', borderBottom: '1px solid #EEE', fontSize: '14px' }}>
+                  <span className="spec-label" style={{ color: '#8E8E93', fontWeight: '700' }}>Core Engine</span>
+                  <span className="spec-value" style={{ color: '#1A1A1A', fontWeight: '800' }}>Next.js v16.2.7</span>
                 </div>
-                <div style={{ marginTop: '24px', textAlign: 'center', fontSize: '13px', color: '#6b7280', fontStyle: 'italic' }}>
-                  "By Good Powers" - Dietrich Bonhoeffer
+                <div className="spec-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '16px 0', borderBottom: '1px solid #EEE', fontSize: '14px' }}>
+                  <span className="spec-label" style={{ color: '#8E8E93', fontWeight: '700' }}>Base Font</span>
+                  <span className="spec-value" style={{ color: '#1A1A1A', fontWeight: '800' }}>에이투지체 (A2z)</span>
                 </div>
-                <div style={{ marginTop: '32px' }}>
-                  <PremiumButton onClick={() => setShowDetails(false)}>닫기</PremiumButton>
+                <div className="spec-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '16px 0', borderBottom: '1px solid #EEE', fontSize: '14px' }}>
+                  <span className="spec-label" style={{ color: '#8E8E93', fontWeight: '700' }}>Terminal Font</span>
+                  <span className="spec-value" style={{ color: '#1A1A1A', fontWeight: '800' }}>Consolas, monospace</span>
+                </div>
+                <div className="spec-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '16px 0', borderBottom: '1px solid #EEE', fontSize: '14px' }}>
+                  <span className="spec-label" style={{ color: '#8E8E93', fontWeight: '700' }}>Deployment</span>
+                  <span className="spec-value" style={{ color: '#1A1A1A', fontWeight: '800' }}>Vercel Edge</span>
+                </div>
+                <div className="spec-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '16px 0', borderBottom: '1px solid #EEE', fontSize: '14px' }}>
+                  <span className="spec-label" style={{ color: '#8E8E93', fontWeight: '700' }}>Developer</span>
+                  <span className="spec-value" style={{ color: '#1A1A1A', fontWeight: '800' }}>Rhee Hose (이호세)</span>
+                </div>
+                <div className="spec-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '16px 0', fontSize: '14px' }}>
+                  <span className="spec-label" style={{ color: '#8E8E93', fontWeight: '700' }}>School</span>
+                  <span className="spec-value" style={{ color: '#1A1A1A', fontWeight: '800' }}>수원 한봄고등학교</span>
                 </div>
               </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+              <div style={{ marginTop: '24px', textAlign: 'center', fontSize: '13px', color: '#6b7280', fontStyle: 'italic' }}>
+                "By Good Powers" - Dietrich Bonhoeffer
+              </div>
+              <div style={{ marginTop: '32px' }}>
+                <PremiumButton onClick={() => setShowDetails(false)}>닫기</PremiumButton>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* 키 프레임 애니메이션 삽입 */}
+      <style jsx global>{`
+        @keyframes slideUp {
+          from { transform: translateY(100%); }
+          to { transform: translateY(0); }
+        }
+      `}</style>
     </div>
   );
 }
