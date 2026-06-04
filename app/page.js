@@ -271,6 +271,46 @@ function getPrompt(mode, devName, cmdIndex, steps) {
   return `${devName}#`;
 }
 
+// 인라인 SVG 아이콘 컴포넌트
+const MonitorIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{display:'inline-block',verticalAlign:'middle',marginRight:'6px'}}>
+    <rect x="2" y="3" width="20" height="14" rx="2" />
+    <line x1="8" y1="21" x2="16" y2="21" />
+    <line x1="12" y1="17" x2="12" y2="21" />
+  </svg>
+);
+const ChartIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{display:'inline-block',verticalAlign:'middle',marginRight:'6px'}}>
+    <line x1="18" y1="20" x2="18" y2="10" />
+    <line x1="12" y1="20" x2="12" y2="4" />
+    <line x1="6" y1="20" x2="6" y2="14" />
+    <line x1="2" y1="20" x2="22" y2="20" />
+  </svg>
+);
+const WrenchIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{display:'inline-block',verticalAlign:'middle',marginRight:'6px'}}>
+    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+  </svg>
+);
+const CheckCircleIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{display:'inline-block',verticalAlign:'middle',marginRight:'6px'}}>
+    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+    <polyline points="22 4 12 14.01 9 11.01" />
+  </svg>
+);
+const BoltIcon = () => (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none" style={{display:'inline-block',verticalAlign:'middle',marginRight:'4px'}}>
+    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+  </svg>
+);
+const InfoIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{display:'inline-block',verticalAlign:'middle',marginRight:'6px'}}>
+    <circle cx="12" cy="12" r="10" />
+    <line x1="12" y1="16" x2="12" y2="12" />
+    <line x1="12" y1="8" x2="12.01" y2="8" />
+  </svg>
+);
+
 export default function Home() {
   const [activeTab, setActiveTab] = useState('home');
   const [showDetails, setShowDetails] = useState(false);
@@ -464,7 +504,7 @@ export default function Home() {
             </div>
 
             <div className="premium-card">
-              <h2 style={{ fontSize: '15px', fontWeight: '900', color: '#16a34a', marginBottom: '16px' }}>💻 Sales PC</h2>
+              <h2 style={{ fontSize: '15px', fontWeight: '900', color: '#16a34a', marginBottom: '16px', display: 'flex', alignItems: 'center' }}><MonitorIcon />Sales PC</h2>
               <div className="pc-config-form">
                 <div className="input-group">
                   <span className="input-label">IP Address</span>
@@ -486,7 +526,7 @@ export default function Home() {
             </div>
 
             <div className="premium-card">
-              <h2 style={{ fontSize: '15px', fontWeight: '900', color: '#16a34a', marginBottom: '16px' }}>💻 Manage PC</h2>
+              <h2 style={{ fontSize: '15px', fontWeight: '900', color: '#16a34a', marginBottom: '16px', display: 'flex', alignItems: 'center' }}><MonitorIcon />Manage PC</h2>
               <div className="pc-config-form">
                 <div className="input-group">
                   <span className="input-label">IP Address</span>
@@ -543,7 +583,7 @@ export default function Home() {
               </div>
             ) : (
               <div className="guide-box" style={{ background: '#f0fdf4', borderLeftColor: '#16a34a' }}>
-                <h4>🎉 Switch 설정 완료!</h4>
+                <h4 style={{ display: 'flex', alignItems: 'center' }}><CheckCircleIcon />Switch 설정 완료!</h4>
                 <p>스위치 설정을 끝냈음. 이제 세 번째 탭(라우터 아이콘)으로 넘어가서 라우터 설정하셈!</p>
               </div>
             )}
@@ -578,7 +618,7 @@ export default function Home() {
 
             {switchStepIdx < SWITCH_STEPS.length && (
               <div style={{ marginTop: '8px' }}>
-                <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#6b7280', display: 'block', marginBottom: '8px' }}>⚡ 모바일 퀵 패드 (터치하여 자동 입력)</span>
+                <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#6b7280', display: 'flex', alignItems: 'center', marginBottom: '8px' }}><BoltIcon />모바일 퀵 패드 (터치하여 자동 입력)</span>
                 <div className="quick-pad">
                   {['en', 'conf t', 'int vl 10', 'ip add 100.0.0.2 255.192.0.0', 'no sh', 'ip de 100.63.255.254', 'vl 10', 'na Sales', 'vl 20', 'na Manage', 'ex', 'int ra f0/1-10', 'sw mo acc', 'sw acc vl 10', 'int ra f0/11-20', 'sw acc vl 20', 'int ra f0/24', 'sw mo tr', 'sw tr all vl 10,20'].map((btnText, i) => (
                     <div key={i} className="quick-btn" onClick={() => handleQuickClick(btnText, 'switch')}>
@@ -612,7 +652,7 @@ export default function Home() {
               </div>
             ) : (
               <div className="guide-box" style={{ background: '#f0fdf4', borderLeftColor: '#16a34a' }}>
-                <h4>🎉 Router 설정 완료!</h4>
+                <h4 style={{ display: 'flex', alignItems: 'center' }}><CheckCircleIcon />Router 설정 완료!</h4>
                 <p>라우터 설정까지 클리어! 축하함. 80점 이상 합격 라인 도달했음!</p>
               </div>
             )}
@@ -672,7 +712,7 @@ export default function Home() {
             <h1 style={{ fontSize: '24px', fontWeight: '900', color: '#16a34a', marginBottom: '24px' }}>종합 상태 및 정보</h1>
             
             <div className="premium-card">
-              <h2 style={{ fontSize: '16px', fontWeight: '900', color: '#111827', marginBottom: '14px' }}>📊 내 학습 진행도</h2>
+              <h2 style={{ fontSize: '16px', fontWeight: '900', color: '#111827', marginBottom: '14px', display: 'flex', alignItems: 'center' }}><ChartIcon />내 학습 진행도</h2>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>
@@ -723,7 +763,7 @@ export default function Home() {
             </div>
 
             <div className="premium-card" style={{ padding: '20px' }}>
-              <h2 style={{ fontSize: '16px', fontWeight: '900', color: '#111827', marginBottom: '12px' }}>🛠️ 개발 사양 (Spec)</h2>
+              <h2 style={{ fontSize: '16px', fontWeight: '900', color: '#111827', marginBottom: '12px', display: 'flex', alignItems: 'center' }}><WrenchIcon />개발 사양 (Spec)</h2>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: '#6b7280' }}>개발 주체</span>
@@ -859,9 +899,7 @@ export default function Home() {
                   <span className="spec-value" style={{ color: '#1A1A1A', fontWeight: '800' }}>수원 한봄고등학교</span>
                 </div>
               </div>
-              <div style={{ marginTop: '24px', textAlign: 'center', fontSize: '13px', color: '#6b7280', fontStyle: 'italic' }}>
-                "By Good Powers" - Dietrich Bonhoeffer
-              </div>
+
               <div style={{ marginTop: '32px' }}>
                 <PremiumButton onClick={() => setShowDetails(false)}>닫기</PremiumButton>
               </div>
