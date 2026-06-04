@@ -33,10 +33,10 @@ export default function PremiumButton({ children, onClick, style = {} }) {
                     right: 0,
                     bottom: 0,
                     background: `
-            radial-gradient(at 0% 0%, rgba(7, 76, 161, 0.8) 0%, transparent 70%),
-            radial-gradient(at 100% 0%, rgba(79, 172, 254, 0.6) 0%, transparent 70%),
-            radial-gradient(at 100% 100%, rgba(0, 242, 254, 0.4) 0%, transparent 70%),
-            radial-gradient(at 0% 100%, rgba(7, 76, 161, 0.6) 0%, transparent 70%)
+            radial-gradient(at 0% 0%, rgba(22, 163, 74, 0.8) 0%, transparent 70%),
+            radial-gradient(at 100% 0%, rgba(52, 211, 153, 0.6) 0%, transparent 70%),
+            radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.4) 0%, transparent 70%),
+            radial-gradient(at 0% 100%, rgba(4, 120, 87, 0.6) 0%, transparent 70%)
           `,
                     pointerEvents: 'none',
                     zIndex: 1
