@@ -1,231 +1,817 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import Image from 'next/image';
+import { useState, useEffect, useRef } from 'react';
 import { HomeIcon, MatchIcon, RankIcon, MoreIcon } from '../components/Icons';
 import { motion, AnimatePresence } from 'framer-motion';
 import PremiumButton from '../components/PremiumButton';
 
+// PC 설정 정답 상수
+const PC_ANSWERS = {
+  sales: {
+    ip: '100.0.0.1',
+    subnet: '255.192.0.0',
+    gateway: '100.63.255.254',
+    dns: '10.10.10.10'
+  },
+  manage: {
+    ip: '100.129.0.1',
+    subnet: '255.192.0.0',
+    gateway: '100.191.255.254',
+    dns: '10.10.10.10'
+  }
+};
+
+// 스위치 명령어 단계 (정보기기.md 기반)
+const SWITCH_STEPS = [
+  { normalized: 'enable', display: 'en', help: '특권 실행 모드로 전환 (enable)' },
+  { normalized: 'configure terminal', display: 'conf t', help: '글로벌 설정 모드로 전환 (configure terminal)' },
+  { normalized: 'interface vlan 10', display: 'int vl 10', help: 'VLAN 10 인터페이스 진입 (interface vlan 10)' },
+  { normalized: 'ip address 100.0.0.2 255.192.0.0', display: 'ip add 100.0.0.2 255.192.0.0', help: 'IP 주소 및 서브넷 마스크 설정' },
+  { normalized: 'no shutdown', display: 'no sh', help: '인터페이스 활성화 (no shutdown)' },
+  { normalized: 'ip default-gateway 100.63.255.254', display: 'ip de 100.63.255.254', help: '디폴트 게이트웨이 지정' },
+  { normalized: 'vlan 10', display: 'vl 10', help: 'VLAN 10 생성' },
+  { normalized: 'name Sales', display: 'na Sales', help: 'VLAN 10 이름 설정 (Sales)' },
+  { normalized: 'vlan 20', display: 'vl 20', help: 'VLAN 20 생성' },
+  { normalized: 'name Manage', display: 'na Manage', help: 'VLAN 20 이름 설정 (Manage)' },
+  { normalized: 'exit', display: 'ex', help: '이전 모드로 나가기 (exit)' },
+  { normalized: 'interface range fastethernet 0/1-10', display: 'int ra f0/1-10', help: '포트 범위 1~10번 선택' },
+  { normalized: 'switchport mode access', display: 'sw mo acc', help: '액세스 모드로 포트 설정' },
+  { normalized: 'switchport access vlan 10', display: 'sw acc vl 10', help: '포트를 VLAN 10에 할당' },
+  { normalized: 'interface range fastethernet 0/11-20', display: 'int ra f0/11-20', help: '포트 범위 11~20번 선택' },
+  { normalized: 'switchport mode access', display: 'sw mo acc', help: '액세스 모드로 포트 설정' },
+  { normalized: 'switchport access vlan 20', display: 'sw acc vl 20', help: '포트를 VLAN 20에 할당' },
+  { normalized: 'interface range fastethernet 0/24', display: 'int ra f0/24', help: '포트 24번 선택' },
+  { normalized: 'switchport mode trunk', display: 'sw mo tr', help: '트렁크 모드로 포트 설정' },
+  { normalized: 'switchport trunk allowed vlan 10,20', display: 'sw tr all vl 10,20', help: '트렁크 허용 VLAN 지정' }
+];
+
+// 라우터 명령어 단계
+const ROUTER_STEPS = [
+  { normalized: 'enable', display: 'en', help: '특권 실행 모드 진입 (enable)' },
+  { normalized: 'configure terminal', display: 'conf t', help: '글로벌 설정 모드 진입 (configure terminal)' },
+  { normalized: 'interface fastethernet 0/0', display: 'int f0/0', help: 'FastEthernet 0/0 인터페이스 선택' },
+  { normalized: 'no shutdown', display: 'no sh', help: '인터페이스 활성화 (no shutdown)' },
+  { normalized: 'interface fastethernet 0/0.10', display: 'int f0/0.10', help: 'VLAN 10용 서브인터페이스 진입' },
+  { normalized: 'encapsulation dot1q 10', display: 'en d 10', help: 'VLAN 10 캡슐화 방식 지정 (encapsulation dot1Q 10)' },
+  { normalized: 'ip address 100.63.255.254 255.192.0.0', display: 'ip add 100.63.255.254 255.192.0.0', help: '서브인터페이스 IP 할당' },
+  { normalized: 'interface fastethernet 0/0.20', display: 'int f0/0.20', help: 'VLAN 20용 서브인터페이스 진입' },
+  { normalized: 'encapsulation dot1q 20', display: 'en d 20', help: 'VLAN 20 캡슐화 지정' },
+  { normalized: 'ip address 100.191.255.254 255.192.0.0', display: 'ip add 100.191.255.254 255.192.0.0', help: '서브인터페이스 IP 할당' },
+  { normalized: 'interface serial 0/0/0', display: 'int s0/0/0', help: 'Serial 0/0/0 인터페이스 진입' },
+  { normalized: 'ip address 172.30.0.9 255.255.255.252', display: 'ip add 172.30.0.9 255.255.255.252', help: '시리얼 IP 설정' },
+  { normalized: 'clock rate 64000', display: 'cl ra 64000', help: '클록 레이트 지정' },
+  { normalized: 'router rip', display: 'rou rip', help: 'RIP 라우팅 프로토콜 활성화' },
+  { normalized: 'version 2', display: 'v2', help: 'RIP 버전 2 활성화' },
+  { normalized: 'network 100.0.0.0', display: 'ne 100.0.0.0', help: '네트워크 대역 등록 (100.0.0.0)' },
+  { normalized: 'network 100.128.0.0', display: 'ne 100.128.0.0', help: '네트워크 대역 등록 (100.128.0.0)' },
+  { normalized: 'network 172.30.0.8', display: 'ne 172.30.0.8', help: '네트워크 대역 등록 (172.30.0.8)' },
+  { normalized: 'passive-interface fastethernet 0/0.10', display: 'pass f0/0.10', help: 'VLAN 10 RIP 브로드캐스트 광고 차단' },
+  { normalized: 'passive-interface fastethernet 0/0.20', display: 'pass f0/0.20', help: 'VLAN 20 RIP 광고 차단' }
+];
+
+// 명령어 정규화 파서
+function normalizeCommand(cmd) {
+  let temp = cmd.trim().toLowerCase().replace(/\s+/g, ' ');
+  
+  // enable
+  if (temp === 'en' || temp === 'ena' || temp === 'enable') return 'enable';
+  // configure terminal
+  if (temp === 'conf t' || temp === 'config t' || temp === 'configure terminal') return 'configure terminal';
+  
+  // exit
+  if (temp === 'ex' || temp === 'exit') return 'exit';
+  // no shutdown
+  if (temp === 'no sh' || temp === 'no shut' || temp === 'no shutdown') return 'no shutdown';
+  
+  // interface vlan 10
+  if (temp.startsWith('int vl ')) {
+    return 'interface vlan ' + temp.substring(7);
+  }
+  if (temp.startsWith('interface vlan ')) {
+    return temp;
+  }
+
+  // ip address ...
+  if (temp.startsWith('ip add ')) {
+    return 'ip address ' + temp.substring(7);
+  }
+  if (temp.startsWith('ip address ')) {
+    return temp;
+  }
+
+  // ip default-gateway ...
+  if (temp.startsWith('ip de ')) {
+    return 'ip default-gateway ' + temp.substring(6);
+  }
+  if (temp.startsWith('ip default-gateway ')) {
+    return temp;
+  }
+
+  // vlan ...
+  if (temp.startsWith('vl ')) {
+    return 'vlan ' + temp.substring(3);
+  }
+  if (temp.startsWith('vlan ')) {
+    return temp;
+  }
+
+  // name ... (대소문자가 섞일 수 있으므로 뒤의 이름은 그대로 살려둠)
+  let rawTrim = cmd.trim();
+  let rawLower = rawTrim.toLowerCase();
+  if (rawLower.startsWith('na ')) {
+    return 'name ' + rawTrim.substring(3).trim();
+  }
+  if (rawLower.startsWith('name ')) {
+    return 'name ' + rawTrim.substring(5).trim();
+  }
+
+  // interface range ...
+  if (rawLower.startsWith('int ra ')) {
+    let port = rawLower.substring(7).trim();
+    if (port.startsWith('f')) {
+      port = 'fastethernet ' + port.substring(1);
+    }
+    return 'interface range ' + port;
+  }
+  if (rawLower.startsWith('interface range ')) {
+    let port = rawLower.substring(16).trim();
+    if (port.startsWith('f')) {
+      port = 'fastethernet ' + port.substring(1);
+    }
+    return 'interface range ' + port;
+  }
+
+  // switchport mode access
+  if (temp === 'sw mo acc' || temp === 'sw mode acc' || temp === 'switchport mode access') return 'switchport mode access';
+  // switchport mode trunk
+  if (temp === 'sw mo tr' || temp === 'sw mode tr' || temp === 'switchport mode trunk') return 'switchport mode trunk';
+
+  // switchport access vlan ...
+  if (temp.startsWith('sw acc vl ')) {
+    return 'switchport access vlan ' + temp.substring(10);
+  }
+  if (temp.startsWith('switchport access vlan ')) {
+    return temp;
+  }
+
+  // switchport trunk allowed vlan ...
+  if (temp.startsWith('sw tr all vl ')) {
+    return 'switchport trunk allowed vlan ' + temp.substring(13);
+  }
+  if (temp.startsWith('sw tr all vlan ')) {
+    return 'switchport trunk allowed vlan ' + temp.substring(15);
+  }
+  if (temp.startsWith('switchport trunk allowed vlan ')) {
+    return temp;
+  }
+
+  // interface fastethernet ...
+  if (temp.startsWith('int f')) {
+    let port = temp.substring(5).trim();
+    if (port.startsWith('0')) {
+      return 'interface fastethernet ' + port;
+    }
+  }
+  if (temp.startsWith('interface fastethernet ')) {
+    return temp;
+  }
+
+  // encapsulation dot1q ...
+  if (temp.startsWith('en d ')) {
+    return 'encapsulation dot1q ' + temp.substring(5);
+  }
+  if (temp.startsWith('encapsulation dot1q ')) {
+    return temp;
+  }
+
+  // interface serial ...
+  if (temp.startsWith('int s')) {
+    let port = temp.substring(5).trim();
+    if (port.startsWith('0')) {
+      return 'interface serial ' + port;
+    }
+  }
+  if (temp.startsWith('interface serial ')) {
+    return temp;
+  }
+
+  // clock rate ...
+  if (temp.startsWith('cl ra ')) {
+    return 'clock rate ' + temp.substring(6);
+  }
+  if (temp.startsWith('clock rate ')) {
+    return temp;
+  }
+
+  // router rip
+  if (temp === 'rou rip' || temp === 'router rip') return 'router rip';
+  // version 2
+  if (temp === 'v2' || temp === 'version 2') return 'version 2';
+
+  // network ...
+  if (temp.startsWith('ne ')) {
+    return 'network ' + temp.substring(3);
+  }
+  if (temp.startsWith('network ')) {
+    return temp;
+  }
+
+  // passive-interface ...
+  if (temp.startsWith('pass f')) {
+    let port = temp.substring(5).trim();
+    if (port.startsWith('0')) {
+      return 'passive-interface fastethernet ' + port;
+    }
+  }
+  if (temp.startsWith('passive-interface fastethernet ')) {
+    return temp;
+  }
+
+  return temp;
+}
+
+// 동적 프롬프트 결정 함수
+function getPrompt(mode, devName, cmdIndex, steps) {
+  if (cmdIndex === 0) return `${devName}>`;
+  
+  // 현재까지 완료된 명령들의 상태를 파악하여 프롬프트 결정
+  let normalizedHistory = steps.slice(0, cmdIndex).map(s => s.normalized);
+  
+  let isConfig = false;
+  let isIf = false;
+  let isRouter = false;
+
+  for (let i = 0; i < normalizedHistory.length; i++) {
+    let cmd = normalizedHistory[i];
+    if (cmd === 'enable') {
+      isConfig = false;
+      isIf = false;
+      isRouter = false;
+    } else if (cmd === 'configure terminal') {
+      isConfig = true;
+      isIf = false;
+      isRouter = false;
+    } else if (cmd.startsWith('interface ')) {
+      isIf = true;
+      isRouter = false;
+    } else if (cmd === 'router rip') {
+      isRouter = true;
+      isIf = false;
+    } else if (cmd === 'exit') {
+      if (isIf || isRouter) {
+        isIf = false;
+        isRouter = false;
+      } else if (isConfig) {
+        isConfig = false;
+      }
+    }
+  }
+
+  if (isIf) return `${devName}(config-if)#`;
+  if (isRouter) return `${devName}(config-router)#`;
+  if (isConfig) return `${devName}(config)#`;
+  return `${devName}#`;
+}
+
 export default function Home() {
-  const [activeTab, setActiveTab] = useState('home');
-  const [matchTime, setMatchTime] = useState('00:00:00');
-  const [isLoading, setIsLoading] = useState(true);
-  const [scoreData, setScoreData] = useState(null);
-  const [hasGame, setHasGame] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [activeTab, setActiveTab] = useState('home'); // home(PC), match(Switch), rank(Router), more(Info)
   const [showDetails, setShowDetails] = useState(false);
 
-  // 드래그 제한을 위한 컨테이너 참조
-  const constraintsRef = useRef(null);
+  // PC 설정 상태
+  const [salesConfig, setSalesConfig] = useState({ ip: '', subnet: '', gateway: '', dns: '' });
+  const [manageConfig, setManageConfig] = useState({ ip: '', subnet: '', gateway: '', dns: '' });
+  const [pcResult, setPcResult] = useState({ success: false, message: '' });
+
+  // 스위치 CLI 상태
+  const [switchCmd, setSwitchCmd] = useState('');
+  const [switchStepIdx, setSwitchStepIdx] = useState(0);
+  const [switchHistory, setSwitchHistory] = useState([
+    { text: 'Switch line proto is down. Press Enter to activate.', type: 'system' },
+    { text: 'Switch> (힌트: en 또는 enable을 입력해서 시작하셈)', type: 'system' }
+  ]);
+
+  // 라우터 CLI 상태
+  const [routerCmd, setRouterCmd] = useState('');
+  const [routerStepIdx, setRouterStepIdx] = useState(0);
+  const [routerHistory, setRouterHistory] = useState([
+    { text: 'Router line proto is down. Press Enter to activate.', type: 'system' },
+    { text: 'Router> (힌트: en 또는 enable을 입력해서 시작하셈)', type: 'system' }
+  ]);
+
+  // 자동 스크롤을 위한 Ref
+  const switchEndRef = useRef(null);
+  const routerEndRef = useRef(null);
 
   useEffect(() => {
-    const handleContextMenu = (e) => e.preventDefault();
-    document.addEventListener('contextmenu', handleContextMenu);
-
-    const githubUrl = "https://github.com/hslcrb/dashboard-for-SamsungLions";
-    const msg = `본 프로젝트는 오픈 소스로 공개되어 있습니다. 소스 코드는 아래 주소에서 확인해 주세요:\n${githubUrl}`;
-
-    let devtoolsOpen = false;
-    const threshold = 160;
-
-    const checkDevTools = () => {
-      const widthDiff = window.outerWidth - window.innerWidth > threshold;
-      const heightDiff = window.outerHeight - window.innerHeight > threshold;
-
-      if ((widthDiff || heightDiff) && !devtoolsOpen) {
-        devtoolsOpen = true;
-        console.clear();
-        console.log(`%c${msg}`, "color: #074CA1; font-size: 14px; font-weight: bold; padding: 10px;");
-        alert(msg);
-        (function () {
-          (function a() {
-            debugger;
-            setTimeout(a, 100);
-          })();
-        })();
-      }
-    };
-
-    window.addEventListener('resize', checkDevTools);
-    console.log(`%cLion Spirits: ${githubUrl}`, "color: #074CA1; font-weight: bold;");
-
-    return () => {
-      document.removeEventListener('contextmenu', handleContextMenu);
-      window.removeEventListener('resize', checkDevTools);
-    };
-  }, []);
-
-  const fetchScores = useCallback(async () => {
-    setIsRefreshing(true);
-    try {
-      const res = await fetch('/api/scores');
-      const data = await res.json();
-      if (data.success) {
-        setHasGame(data.hasGame);
-        setScoreData(data.game || null);
-      }
-    } catch (err) {
-      console.error("데이터 동기화 실패:", err);
-      setHasGame(false);
-    } finally {
-      setTimeout(() => setIsRefreshing(false), 500);
+    if (activeTab === 'match' && switchEndRef.current) {
+      switchEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, []);
+  }, [switchHistory, activeTab]);
 
   useEffect(() => {
-    const init = async () => {
-      await fetchScores();
-      setIsLoading(false);
-    };
-    init();
-    const interval = setInterval(fetchScores, 30000);
-    const clock = setInterval(() => {
-      const now = new Date();
-      setMatchTime(now.toLocaleTimeString('ko-KR', { hour12: false }));
-    }, 1000);
-    return () => { clearInterval(interval); clearInterval(clock); };
-  }, [fetchScores]);
+    if (activeTab === 'rank' && routerEndRef.current) {
+      routerEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [routerHistory, activeTab]);
+
+  // PC 설정 제출 처리
+  const handlePcSubmit = () => {
+    const isSalesCorrect =
+      salesConfig.ip === PC_ANSWERS.sales.ip &&
+      salesConfig.subnet === PC_ANSWERS.sales.subnet &&
+      salesConfig.gateway === PC_ANSWERS.sales.gateway &&
+      salesConfig.dns === PC_ANSWERS.sales.dns;
+
+    const isManageCorrect =
+      manageConfig.ip === PC_ANSWERS.manage.ip &&
+      manageConfig.subnet === PC_ANSWERS.manage.subnet &&
+      manageConfig.gateway === PC_ANSWERS.manage.gateway &&
+      manageConfig.dns === PC_ANSWERS.manage.dns;
+
+    if (isSalesCorrect && isManageCorrect) {
+      setPcResult({
+        success: true,
+        message: '오! 완벽함. PC IP 설정 다 맞췄음! 스위치 설정 탭(두 번째 아이콘)으로 넘어가셈!'
+      });
+    } else {
+      let errorMsg = '뭔가 틀렸음. 정보기기.md 다시 보고 오셈.\n';
+      if (!isSalesCorrect) errorMsg += '• Sales PC 설정 확인 필요\n';
+      if (!isManageCorrect) errorMsg += '• Manage PC 설정 확인 필요';
+      setPcResult({
+        success: false,
+        message: errorMsg
+      });
+    }
+  };
+
+  // PC 정답 자동입력(테스트용 편의기능)
+  const autoFillPc = () => {
+    setSalesConfig({
+      ip: '100.0.0.1',
+      subnet: '255.192.0.0',
+      gateway: '100.63.255.254',
+      dns: '10.10.10.10'
+    });
+    setManageConfig({
+      ip: '100.129.0.1',
+      subnet: '255.192.0.0',
+      gateway: '100.191.255.254',
+      dns: '10.10.10.10'
+    });
+  };
+
+  // 스위치 명령어 입력 처리
+  const handleSwitchSubmit = (e) => {
+    if (e) e.preventDefault();
+    if (!switchCmd.trim()) return;
+
+    const rawInput = switchCmd;
+    const normalizedInput = normalizeCommand(rawInput);
+    setSwitchCmd('');
+
+    // 이미 모든 단계를 클리어했을 경우
+    if (switchStepIdx >= SWITCH_STEPS.length) {
+      setSwitchHistory(prev => [
+        ...prev,
+        { text: `Switch# ${rawInput}`, type: 'command' },
+        { text: '스위치 설정은 이미 완료되었음! 더이상 입력할 필요 없음.', type: 'system' }
+      ]);
+      return;
+    }
+
+    const currentPrompt = getPrompt('Switch', 'Switch', switchStepIdx, SWITCH_STEPS);
+    const expected = SWITCH_STEPS[switchStepIdx];
+
+    // 정답 체크
+    if (normalizedInput === expected.normalized) {
+      const nextIdx = switchStepIdx + 1;
+      const nextPrompt = getPrompt('Switch', 'Switch', nextIdx, SWITCH_STEPS);
+      
+      setSwitchHistory(prev => [
+        ...prev,
+        { text: `${currentPrompt} ${rawInput}`, type: 'command' },
+        { text: nextIdx >= SWITCH_STEPS.length ? '스위치 설정 완벽 클리어! 다음은 라우터다!' : `${nextPrompt}`, type: 'success' }
+      ]);
+      setSwitchStepIdx(nextIdx);
+    } else {
+      setSwitchHistory(prev => [
+        ...prev,
+        { text: `${currentPrompt} ${rawInput}`, type: 'command' },
+        { text: `% Invalid input detected at '^' marker. (정답: ${expected.display})`, type: 'error' }
+      ]);
+    }
+  };
+
+  // 라우터 명령어 입력 처리
+  const handleRouterSubmit = (e) => {
+    if (e) e.preventDefault();
+    if (!routerCmd.trim()) return;
+
+    const rawInput = routerCmd;
+    const normalizedInput = normalizeCommand(rawInput);
+    setRouterCmd('');
+
+    if (routerStepIdx >= ROUTER_STEPS.length) {
+      setRouterHistory(prev => [
+        ...prev,
+        { text: `Router# ${rawInput}`, type: 'command' },
+        { text: '라우터 설정 끝났음! 이제 정보 탭에서 합격 결과를 확인하셈.', type: 'system' }
+      ]);
+      return;
+    }
+
+    const currentPrompt = getPrompt('Router', 'Router', routerStepIdx, ROUTER_STEPS);
+    const expected = ROUTER_STEPS[routerStepIdx];
+
+    if (normalizedInput === expected.normalized) {
+      const nextIdx = routerStepIdx + 1;
+      const nextPrompt = getPrompt('Router', 'Router', nextIdx, ROUTER_STEPS);
+
+      setRouterHistory(prev => [
+        ...prev,
+        { text: `${currentPrompt} ${rawInput}`, type: 'command' },
+        { text: nextIdx >= ROUTER_STEPS.length ? '라우터 설정 완벽 클리어! 합격 커트라인 돌파!' : `${nextPrompt}`, type: 'success' }
+      ]);
+      setRouterStepIdx(nextIdx);
+    } else {
+      setRouterHistory(prev => [
+        ...prev,
+        { text: `${currentPrompt} ${rawInput}`, type: 'command' },
+        { text: `% Invalid input detected at '^' marker. (정답: ${expected.display})`, type: 'error' }
+      ]);
+    }
+  };
+
+  // 퀵 버튼 클릭 핸들러
+  const handleQuickClick = (text, tab) => {
+    if (tab === 'switch') {
+      setSwitchCmd(text);
+    } else if (tab === 'router') {
+      setRouterCmd(text);
+    }
+  };
 
   const renderContent = () => {
-    if (isLoading) {
-      return (
-        <div className="scroll-area" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#FFFFFF' }}>
-          <div className="logo-wrapper">
-            <Image src="/logo.svg" alt="최강삼성! 라이온즈" title="최강삼성! 라이온즈" width={110} height={90} priority />
-            <div className="glint-effect"></div>
-          </div>
-        </div>
-      );
-    }
-
     switch (activeTab) {
-      case 'home': return (
-        <div className="scroll-area animate-fade">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', padding: '0 0 32px 0' }}>
-            <div style={{ position: 'relative', width: '130px', height: '44px' }}>
-              <Image src="/logo.svg" alt="최강삼성! 라이온즈" title="최강삼성! 라이온즈" fill style={{ objectFit: 'contain', objectPosition: 'left' }} />
-            </div>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: '11px', fontWeight: '900', color: '#074CA1', letterSpacing: '1px', marginBottom: '2px' }}>최강삼성 승리하리라</div>
-              <div style={{ fontSize: '13px', fontWeight: '600', color: '#8E8E93', tabularNums: true }}>{matchTime}</div>
-            </div>
-          </div>
-          {hasGame && scoreData ? (
-            <div className={`premium-card ${isRefreshing ? 'refreshing' : ''}`}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span className={scoreData.isLive ? "live-dot" : "inactive-dot"}></span>
-                  <span style={{ fontSize: '14px', fontWeight: '950', color: scoreData.isLive ? '#FF3B30' : '#1A1A1A' }}>{scoreData.isLive ? '라이브 중계' : '최근 경기'}</span>
-                </div>
-                <div style={{ fontSize: '11px', fontWeight: '800', color: '#BBB' }}>KBO 공식 데이터</div>
+      // 1. PC 설정 탭
+      case 'home':
+        return (
+          <div className="scroll-area animate-fade">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', padding: '0 0 24px 0' }}>
+              <div>
+                <span style={{ fontSize: '12px', fontWeight: '900', color: '#16a34a', letterSpacing: '1px' }}>Cisco 실습 #1</span>
+                <h1 style={{ margin: 0, fontSize: '22px', fontWeight: '900', color: '#1A1A1A' }}>PC IP 설정 (GUI)</h1>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ textAlign: 'center', flex: 1 }}>
-                  <div style={{ position: 'relative', width: '36px', height: '28px', margin: '0 auto 12px' }}>
-                    <Image src="/logo.svg" alt="최강삼성! 라이온즈" title="최강삼성! 라이온즈" fill style={{ objectFit: 'contain' }} />
+              <button 
+                onClick={autoFillPc}
+                style={{ fontSize: '11px', padding: '6px 12px', background: '#f3f4f6', border: '1px solid #d1d5db', borderRadius: '8px', cursor: 'pointer', color: '#4b5563', fontFamily: 'Consolas, monospace' }}
+              >
+                Auto Fill
+              </button>
+            </div>
+
+            <div className="premium-card">
+              <h2 style={{ fontSize: '15px', fontWeight: '900', color: '#16a34a', marginBottom: '16px' }}>💻 Sales PC</h2>
+              <div className="pc-config-form">
+                <div className="input-group">
+                  <span className="input-label">IP Address</span>
+                  <input type="text" className="form-input" placeholder="100.0.0.1" value={salesConfig.ip} onChange={e => setSalesConfig({...salesConfig, ip: e.target.value})} />
+                </div>
+                <div className="input-group">
+                  <span className="input-label">Subnet Mask</span>
+                  <input type="text" className="form-input" placeholder="255.192.0.0" value={salesConfig.subnet} onChange={e => setSalesConfig({...salesConfig, subnet: e.target.value})} />
+                </div>
+                <div className="input-group">
+                  <span className="input-label">Default Gateway</span>
+                  <input type="text" className="form-input" placeholder="100.63.255.254" value={salesConfig.gateway} onChange={e => setSalesConfig({...salesConfig, gateway: e.target.value})} />
+                </div>
+                <div className="input-group">
+                  <span className="input-label">DNS Server</span>
+                  <input type="text" className="form-input" placeholder="10.10.10.10" value={salesConfig.dns} onChange={e => setSalesConfig({...salesConfig, dns: e.target.value})} />
+                </div>
+              </div>
+            </div>
+
+            <div className="premium-card">
+              <h2 style={{ fontSize: '15px', fontWeight: '900', color: '#16a34a', marginBottom: '16px' }}>💻 Manage PC</h2>
+              <div className="pc-config-form">
+                <div className="input-group">
+                  <span className="input-label">IP Address</span>
+                  <input type="text" className="form-input" placeholder="100.129.0.1" value={manageConfig.ip} onChange={e => setManageConfig({...manageConfig, ip: e.target.value})} />
+                </div>
+                <div className="input-group">
+                  <span className="input-label">Subnet Mask</span>
+                  <input type="text" className="form-input" placeholder="255.192.0.0" value={manageConfig.subnet} onChange={e => setManageConfig({...manageConfig, subnet: e.target.value})} />
+                </div>
+                <div className="input-group">
+                  <span className="input-label">Default Gateway</span>
+                  <input type="text" className="form-input" placeholder="100.191.255.254" value={manageConfig.gateway} onChange={e => setManageConfig({...manageConfig, gateway: e.target.value})} />
+                </div>
+                <div className="input-group">
+                  <span className="input-label">DNS Server</span>
+                  <input type="text" className="form-input" placeholder="10.10.10.10" value={manageConfig.dns} onChange={e => setManageConfig({...manageConfig, dns: e.target.value})} />
+                </div>
+              </div>
+            </div>
+
+            {pcResult.message && (
+              <div className={`guide-box`} style={{ borderLeftColor: pcResult.success ? '#16a34a' : '#dc2626', background: pcResult.success ? '#f0fdf4' : '#fef2f2', marginBottom: '16px' }}>
+                <h4 style={{ color: pcResult.success ? '#15803d' : '#991b1b' }}>{pcResult.success ? '성공!' : '오류 발생'}</h4>
+                <p style={{ whiteSpace: 'pre-line', color: pcResult.success ? '#166534' : '#991b1b' }}>{pcResult.message}</p>
+              </div>
+            )}
+
+            <div style={{ marginTop: '12px' }}>
+              <PremiumButton onClick={handlePcSubmit}>
+                PC 설정 완료 & 검증
+              </PremiumButton>
+            </div>
+            <div style={{ height: '30px' }}></div>
+          </div>
+        );
+
+      // 2. Switch 설정 탭
+      case 'match':
+        return (
+          <div className="scroll-area animate-fade">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', padding: '0 0 24px 0' }}>
+              <div>
+                <span style={{ fontSize: '12px', fontWeight: '900', color: '#16a34a', letterSpacing: '1px' }}>Cisco 실습 #2</span>
+                <h1 style={{ margin: 0, fontSize: '22px', fontWeight: '900', color: '#1A1A1A' }}>Switch CLI 설정</h1>
+              </div>
+              <div style={{ fontSize: '13px', fontWeight: '800', color: '#6b7280', fontFamily: 'Consolas, monospace' }}>
+                진행도: {Math.round((switchStepIdx / SWITCH_STEPS.length) * 100)}%
+              </div>
+            </div>
+
+            {/* 가이드 안내 상자 */}
+            {switchStepIdx < SWITCH_STEPS.length ? (
+              <div className="guide-box">
+                <h4>[다음 가이드]</h4>
+                <p>{SWITCH_STEPS[switchStepIdx].help} ({SWITCH_STEPS[switchStepIdx].display})</p>
+              </div>
+            ) : (
+              <div className="guide-box" style={{ background: '#f0fdf4', borderLeftColor: '#16a34a' }}>
+                <h4>🎉 Switch 설정 완료!</h4>
+                <p>스위치 설정을 끝냈음. 이제 세 번째 탭(라우터 아이콘)으로 넘어가서 라우터 설정하셈!</p>
+              </div>
+            )}
+
+            {/* 정갈한 흰색 배경 터미널 창 */}
+            <div className="terminal-box">
+              <div className="terminal-output">
+                {switchHistory.map((line, idx) => (
+                  <div key={idx} className={`terminal-line ${line.type}`}>
+                    {line.text}
                   </div>
-                  <div className="score-number">{scoreData.homeScore ?? 0}</div>
+                ))}
+                <div ref={switchEndRef} />
+              </div>
+              
+              <form onSubmit={handleSwitchSubmit} className="terminal-input-row">
+                <span className="terminal-prompt">
+                  {getPrompt('Switch', 'Switch', switchStepIdx, SWITCH_STEPS)}
+                </span>
+                <input
+                  type="text"
+                  className="terminal-input"
+                  value={switchCmd}
+                  onChange={e => setSwitchCmd(e.target.value)}
+                  placeholder="명령어 입력..."
+                  autoFocus
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  spellCheck="false"
+                />
+              </form>
+            </div>
+
+            {/* 모바일 퀵 키패드 */}
+            {switchStepIdx < SWITCH_STEPS.length && (
+              <div style={{ marginTop: '8px' }}>
+                <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#6b7280', display: 'block', marginBottom: '8px' }}>⚡ 모바일 퀵 패드 (터치하여 자동 입력)</span>
+                <div className="quick-pad">
+                  {['en', 'conf t', 'int vl 10', 'ip add 100.0.0.2 255.192.0.0', 'no sh', 'ip de 100.63.255.254', 'vl 10', 'na Sales', 'vl 20', 'na Manage', 'ex', 'int ra f0/1-10', 'sw mo acc', 'sw acc vl 10', 'int ra f0/11-20', 'sw acc vl 20', 'int ra f0/24', 'sw mo tr', 'sw tr all vl 10,20'].map((btnText, i) => (
+                    <div key={i} className="quick-btn" onClick={() => handleQuickClick(btnText, 'switch')}>
+                      {btnText.split(' ')[0] + (btnText.split(' ')[1] ? ' ' + btnText.split(' ')[1] : '')}
+                    </div>
+                  ))}
                 </div>
-                <div style={{ fontSize: '20px', fontWeight: '100', color: '#DDD', padding: '0 10px' }}>:</div>
-                <div style={{ textAlign: 'center', flex: 1 }}>
-                  <div style={{ fontSize: '15px', fontWeight: '950', color: '#333', marginBottom: '15px' }}>{scoreData.away}</div>
-                  <div className="score-number dark">{scoreData.awayScore ?? 0}</div>
+              </div>
+            )}
+            <div style={{ height: '30px' }}></div>
+          </div>
+        );
+
+      // 3. Router 설정 탭
+      case 'rank':
+        return (
+          <div className="scroll-area animate-fade">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', padding: '0 0 24px 0' }}>
+              <div>
+                <span style={{ fontSize: '12px', fontWeight: '900', color: '#16a34a', letterSpacing: '1px' }}>Cisco 실습 #3</span>
+                <h1 style={{ margin: 0, fontSize: '22px', fontWeight: '900', color: '#1A1A1A' }}>Router CLI 설정</h1>
+              </div>
+              <div style={{ fontSize: '13px', fontWeight: '800', color: '#6b7280', fontFamily: 'Consolas, monospace' }}>
+                진행도: {Math.round((routerStepIdx / ROUTER_STEPS.length) * 100)}%
+              </div>
+            </div>
+
+            {/* 가이드 안내 상자 */}
+            {routerStepIdx < ROUTER_STEPS.length ? (
+              <div className="guide-box">
+                <h4>[다음 가이드]</h4>
+                <p>{ROUTER_STEPS[routerStepIdx].help} ({ROUTER_STEPS[routerStepIdx].display})</p>
+              </div>
+            ) : (
+              <div className="guide-box" style={{ background: '#f0fdf4', borderLeftColor: '#16a34a' }}>
+                <h4>🎉 Router 설정 완료!</h4>
+                <p>라우터 설정까지 클리어! 축하함. 80점 이상 합격 라인 도달했음!</p>
+              </div>
+            )}
+
+            {/* 정갈한 흰색 배경 터미널 창 */}
+            <div className="terminal-box">
+              <div className="terminal-output">
+                {routerHistory.map((line, idx) => (
+                  <div key={idx} className={`terminal-line ${line.type}`}>
+                    {line.text}
+                  </div>
+                ))}
+                <div ref={routerEndRef} />
+              </div>
+              
+              <form onSubmit={handleRouterSubmit} className="terminal-input-row">
+                <span className="terminal-prompt">
+                  {getPrompt('Router', 'Router', routerStepIdx, ROUTER_STEPS)}
+                </span>
+                <input
+                  type="text"
+                  className="terminal-input"
+                  value={routerCmd}
+                  onChange={e => setRouterCmd(e.target.value)}
+                  placeholder="명령어 입력..."
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  spellCheck="false"
+                />
+              </form>
+            </div>
+
+            {/* 모바일 퀵 키패드 */}
+            {routerStepIdx < ROUTER_STEPS.length && (
+              <div style={{ marginTop: '8px' }}>
+                <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#6b7280', display: 'block', marginBottom: '8px' }}>⚡ 모바일 퀵 패드 (터치하여 자동 입력)</span>
+                <div className="quick-pad">
+                  {['en', 'conf t', 'int f0/0', 'no sh', 'int f0/0.10', 'en d 10', 'ip add 100.63.255.254 255.192.0.0', 'int f0/0.20', 'en d 20', 'ip add 100.191.255.254 255.192.0.0', 'int s0/0/0', 'ip add 172.30.0.9 255.255.255.252', 'cl ra 64000', 'rou rip', 'v2', 'ne 100.0.0.0', 'ne 100.128.0.0', 'ne 172.30.0.8', 'pass f0/0.10', 'pass f0/0.20'].map((btnText, i) => (
+                    <div key={i} className="quick-btn" onClick={() => handleQuickClick(btnText, 'router')}>
+                      {btnText.split(' ')[0] + (btnText.split(' ')[1] ? ' ' + btnText.split(' ')[1] : '')}
+                    </div>
+                  ))}
                 </div>
               </div>
-              <div className="card-footer-info">
-                <p>{scoreData.status} {scoreData.inning && `| ${scoreData.inning}`}</p>
-                <p className="sync-info">실시간 매치 데이터 동기화 중 (30초 간격)</p>
+            )}
+            <div style={{ height: '30px' }}></div>
+          </div>
+        );
+
+      // 4. 정보 및 설정 탭
+      case 'more':
+        const pcProgress = pcResult.success ? 100 : 0;
+        const switchProgress = Math.round((switchStepIdx / SWITCH_STEPS.length) * 100);
+        const routerProgress = Math.round((routerStepIdx / ROUTER_STEPS.length) * 100);
+        const totalProgress = Math.round((pcProgress + switchProgress + routerProgress) / 3);
+
+        return (
+          <div className="scroll-area animate-fade">
+            <h1 style={{ fontSize: '24px', fontWeight: '900', color: '#16a34a', marginBottom: '24px' }}>종합 상태 및 정보</h1>
+            
+            <div className="premium-card">
+              <h2 style={{ fontSize: '16px', fontWeight: '900', color: '#111827', marginBottom: '14px' }}>📊 내 학습 진행도</h2>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>
+                    <span>PC IP 설정</span>
+                    <span>{pcProgress}%</span>
+                  </div>
+                  <div style={{ width: '100%', height: '6px', background: '#e5e7eb', borderRadius: '3px', overflow: 'hidden' }}>
+                    <div style={{ width: `${pcProgress}%`, height: '100%', background: '#16a34a' }} />
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>
+                    <span>Switch 설정 CLI</span>
+                    <span>{switchProgress}%</span>
+                  </div>
+                  <div style={{ width: '100%', height: '6px', background: '#e5e7eb', borderRadius: '3px', overflow: 'hidden' }}>
+                    <div style={{ width: `${switchProgress}%`, height: '100%', background: '#16a34a' }} />
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>
+                    <span>Router 설정 CLI</span>
+                    <span>{routerProgress}%</span>
+                  </div>
+                  <div style={{ width: '100%', height: '6px', background: '#e5e7eb', borderRadius: '3px', overflow: 'hidden' }}>
+                    <div style={{ width: `${routerProgress}%`, height: '100%', background: '#16a34a' }} />
+                  </div>
+                </div>
+
+                <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: '10px', marginTop: '4px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', fontWeight: '900' }}>
+                    <span>총합 달성률</span>
+                    <span style={{ color: '#16a34a' }}>{totalProgress}%</span>
+                  </div>
+                </div>
               </div>
             </div>
-          ) : (
-            <div className="premium-card empty-state">
-              <div style={{ position: 'relative', width: '40px', height: '40px', margin: '0 auto 20px', opacity: 0.1 }}>
-                <Image src="/logo.svg" alt="최강삼성! 라이온즈" title="최강삼성! 라이온즈" fill style={{ objectFit: 'contain' }} />
+
+            <div className="premium-card">
+              <h2 style={{ fontSize: '16px', fontWeight: '900', color: '#111827', marginBottom: '14px' }}>😸 고양이 민주주의 & 신념</h2>
+              <p style={{ fontSize: '13px', color: '#4b5563', lineHeight: '1.6' }}>
+                우리는 실질적인 효율성과 에너지 안보를 위해 **원자력 발전**을 전적으로 지지하며, 감성적인 탈원전에 강력 반대합니다! 
+                위선적인 좌파식 가치관은 척결하고 오직 자유민주주의 헌법 정신과 보수적 가치를 기반으로 세상을 봅니다.
+                그리고 기억하셈: <strong>"고양이민주주의" (Cat Democracy)</strong> 만세! 장 건강 유산균 챙겨먹는 것도 잊지 마시길.
+              </p>
+            </div>
+
+            <div className="premium-card" style={{ padding: '20px' }}>
+              <h2 style={{ fontSize: '16px', fontWeight: '900', color: '#111827', marginBottom: '12px' }}>🛠️ 개발 사양 (Spec)</h2>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#6b7280' }}>개발 주체</span>
+                  <span style={{ fontWeight: 'bold' }}>한봄고등학교 빅데이터정보과 기능반 Semgle</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#6b7280' }}>메인 개발자</span>
+                  <span style={{ fontWeight: 'bold' }}>이호세 (Rhee Hose)</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#6b7280' }}>덕질 목록</span>
+                  <span style={{ fontWeight: 'bold', color: '#16a34a' }}>Next.js, Python, C/C++, Rust, Java</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#6b7280' }}>배포 서버</span>
+                  <span style={{ fontWeight: 'bold', color: '#16a34a' }}>Vercel (배포는 역시 Vercel이 1황)</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#6b7280' }}>호주 이민 목표</span>
+                  <span style={{ fontWeight: 'bold', color: '#047857' }}>브리즈번 & 크리스탈 워터스 에코 빌리지행</span>
+                </div>
               </div>
-              <h2 style={{ fontSize: '18px', margin: 0, fontWeight: '900', color: '#1A1A1A' }}>오늘은 예정된 경기가 없습니다</h2>
-              <p style={{ fontSize: '13px', color: '#999', marginTop: '10px' }}>팬 여러분, 내일 경기를 준비해 주세요!</p>
+              <div style={{ marginTop: '16px' }}>
+                <PremiumButton onClick={() => setShowDetails(true)}>기술 상세 보기</PremiumButton>
+              </div>
             </div>
-          )}
-          <div className="premium-card">
-            <h2 className="section-title">라이온즈 최신 소식</h2>
-            <div className="simple-list">
-              <div className="list-item">라이온즈 파크 주말 경기 입장권 매진</div>
-              <div className="list-item">선수단 컨디션 점검 및 훈련 리포트 발간</div>
+
+            <div style={{ textAlign: 'center', opacity: 0.5, fontSize: '11px', color: '#6b7280', marginTop: '20px', paddingBottom: '30px' }}>
+              <p>© 2026 Cisco IOS Practice App by Hose Rhee.</p>
             </div>
           </div>
-          <div style={{ marginTop: '10px' }}>
-            <PremiumButton onClick={fetchScores}>
-              {isRefreshing ? '데이터 동기화 중...' : '데이터 수동 새로고침'}
-            </PremiumButton>
-          </div>
-          <div style={{ height: '30px' }}></div>
-        </div>
-      );
-      case 'match': return (
-        <div className="scroll-area animate-fade">
-          <h1 className="page-title">경기 일정</h1>
-          {[
-            { date: '2026.06.04', vs: 'LG 트윈스', place: '대구 라이온즈 파크' },
-            { date: '2026.06.05', vs: 'SSG 랜더스', place: '인천 SSG 랜더스 필드' }
-          ].map((m, i) => (
-            <div key={i} className="premium-card schedule-row">
-              <div className="date-tag">{m.date}</div>
-              <div className="game-info"><h2>{m.vs}</h2><p>{m.place}</p></div>
-            </div>
-          ))}
-        </div>
-      );
-      case 'rank': return (
-        <div className="scroll-area animate-fade">
-          <h1 className="page-title">리그 순위</h1>
-          <div className="premium-card table-wrapper">
-            <table>
-              <thead><tr><th>순위</th><th>팀 명</th><th style={{ textAlign: 'right' }}>승률</th></tr></thead>
-              <tbody><tr className="highlight-row"><td>1</td><td>삼성 라이온즈</td><td style={{ textAlign: 'right' }}>0.658</td></tr></tbody>
-            </table>
-          </div>
-        </div>
-      );
-      case 'more': return (
-        <div className="scroll-area animate-fade">
-          <h1 className="page-title">정보 및 설정</h1>
-          <div className="premium-card about-card">
-            <div className="about-logo"><Image src="/logo.svg" alt="최강삼성! 라이온즈" title="최강삼성! 라이온즈" fill style={{ objectFit: 'contain' }} /></div>
-            <h2>라이언즈 팬 대시보드</h2>
-            <p>Lion Spirits Fan Project v1.4.4</p>
-            <div style={{ marginTop: '20px' }}>
-              <PremiumButton onClick={() => setShowDetails(true)}>기술 스택 자세히 보기</PremiumButton>
-            </div>
-          </div>
-          <div className="disclaimer"><p>본 대시보드는 공개된 데이터를 사용하는 팬 메이드 프로젝트입니다.</p><p>© 2026 최강삼성 팬 프로젝트</p></div>
-        </div>
-      );
-      default: return null;
+        );
+      default:
+        return null;
     }
   };
 
   return (
-    <div className="app-container" ref={constraintsRef}>
+    <div className="app-container">
       {renderContent()}
+      
+      {/* 하단 탭 메뉴 */}
       <nav className="bottom-nav">
-        {[{ id: 'home', icon: <HomeIcon />, label: '홈' }, { id: 'match', icon: <MatchIcon />, label: '일정' }, { id: 'rank', icon: <RankIcon />, label: '순위' }, { id: 'more', icon: <MoreIcon />, label: '정보' }].map((tab) => (
-          <div key={tab.id} className={`nav-item ${activeTab === tab.id ? 'active' : ''}`} onClick={() => setActiveTab(tab.id)}>
-            <div className="icon-wrapper">{tab.icon}</div><span>{tab.label}</span>
+        {[
+          { id: 'home', icon: <HomeIcon />, label: 'PC설정' },
+          { id: 'match', icon: <MatchIcon />, label: '스위치' },
+          { id: 'rank', icon: <RankIcon />, label: '라우터' },
+          { id: 'more', icon: <MoreIcon />, label: '종합정보' }
+        ].map((tab) => (
+          <div
+            key={tab.id}
+            className={`nav-item ${activeTab === tab.id ? 'active' : ''}`}
+            onClick={() => setActiveTab(tab.id)}
+          >
+            <div className="icon-wrapper">{tab.icon}</div>
+            <span>{tab.label}</span>
           </div>
         ))}
       </nav>
 
+      {/* 바텀 시트 상세 모달 */}
       <AnimatePresence>
         {showDetails && (
           <>
-            <motion.div className="modal-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowDetails(false)} />
-
-            {/* 
-              과도한 상승 방지 대책: 
-              1. constraintsRef(부모 컨테이너)를 기준으로 드래그 영역을 물리적으로 제한.
-              2. dragElastic을 0으로 설정하여 한계점을 절대 넘지 못하게 함.
-              3. % 단위 대신 px 단위를 혼합하여 계산 오차 방지.
-            */}
+            <motion.div
+              className="modal-overlay"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowDetails(false)}
+            />
             <motion.div
               className="bottom-sheet"
               initial={{ y: 800 }}
@@ -233,15 +819,15 @@ export default function Home() {
               exit={{ y: 800 }}
               drag="y"
               dragConstraints={{ top: 0, bottom: 600 }}
-              dragElastic={0} // 한계점 돌파 절대 금지
+              dragElastic={0}
               onDragEnd={(e, info) => {
                 if (info.offset.y > 200 || info.velocity.y > 600) setShowDetails(false);
               }}
               transition={{ type: "spring", damping: 35, stiffness: 250 }}
               style={{
-                height: '75vh', /* 적절한 높이로 하향 조정 */
+                height: '75vh',
                 position: 'fixed',
-                bottom: '-20vh', /* 하단 끊김 방지를 위해 아래로 더 길게 구성 */
+                bottom: '-20vh',
                 zIndex: 1001,
                 background: 'white',
                 paddingBottom: '20vh'
@@ -249,16 +835,17 @@ export default function Home() {
             >
               <div className="sheet-handle" />
               <div className="sheet-content">
-                <h3 className="sheet-title">Software Specifications</h3>
+                <h3 className="sheet-title" style={{ color: '#16a34a', fontWeight: '900' }}>Software Specifications</h3>
                 <div className="spec-list">
                   <div className="spec-row"><span className="spec-label">Core Engine</span><span className="spec-value">Next.js v16.2.7</span></div>
                   <div className="spec-row"><span className="spec-label">Base Font</span><span className="spec-value">에이투지체 (A2z)</span></div>
-                  <div className="spec-row"><span className="spec-label">Interaction</span><span className="spec-value">Framer Motion v11</span></div>
+                  <div className="spec-row"><span className="spec-label">Terminal Font</span><span className="spec-value">Consolas, monospace</span></div>
                   <div className="spec-row"><span className="spec-label">Deployment</span><span className="spec-value">Vercel Edge</span></div>
                   <div className="spec-row"><span className="spec-label">Developer</span><span className="spec-value">Rhee Hose (이호세)</span></div>
+                  <div className="spec-row"><span className="spec-label">School</span><span className="spec-value">수원 한봄고등학교</span></div>
                 </div>
-                <div style={{ marginTop: '32px', textAlign: 'center' }}>
-                  <a href="https://noonnu.cc/font_page/1778" target="_blank" rel="noopener noreferrer" className="no-underline-link">에이투지체 공식 다운로드</a>
+                <div style={{ marginTop: '24px', textAlign: 'center', fontSize: '13px', color: '#6b7280', fontStyle: 'italic' }}>
+                  "By Good Powers" - Dietrich Bonhoeffer
                 </div>
                 <div style={{ marginTop: '32px' }}>
                   <PremiumButton onClick={() => setShowDetails(false)}>닫기</PremiumButton>
@@ -268,40 +855,6 @@ export default function Home() {
           </>
         )}
       </AnimatePresence>
-
-      <style jsx global>{`
-        #vercel-live-feedback, .vercel-toolbar { display: none !important; }
-        .live-dot { width: 8px; height: 8px; background: #FF3B30; border-radius: 50%; box-shadow: 0 0 10px rgba(255, 59, 48, 0.6); animation: pulse 1.5s infinite; }
-        .inactive-dot { width: 8px; height: 8px; background: #C0C0C0; border-radius: 50%; }
-        .score-number { font-size: 64px; color: #074CA1; font-weight: 950; letter-spacing: -3px; line-height: 1; }
-        .score-number.dark { color: #1A1A1A; }
-        .premium-card.refreshing { opacity: 0.5; transform: scale(0.995); }
-        .sync-info { font-size: 10px; color: #999; font-weight: 600; margin-top: 8px; }
-        .card-footer-info { margin-top: 28px; padding-top: 18px; border-top: 1px solid #F0F2F5; text-align: center; }
-        .card-footer-info p { font-size: 15px; color: #1A1A1A; font-weight: 900; margin: 0; }
-        .empty-state { padding: 80px 24px; text-align: center; }
-        .section-title { font-size: 16px; margin-bottom: 20px; font-weight: 900; color: #1A1A1A; letter-spacing: 0.5px; }
-        .list-item { padding: 18px; background: #F8F9FA; border-radius: 20px; color: #1A1A1A; font-weight: 700; font-size: 14px; margin-bottom: 12px; transition: all 0.2s; }
-        .page-title { font-size: 26px; font-weight: 900; color: #074CA1; margin-bottom: 32px; letter-spacing: -0.5px; }
-        .date-tag { font-size: 12px; color: #074CA1; font-weight: 950; margin-bottom: 6px; }
-        .table-wrapper table { width: 100%; border-collapse: collapse; }
-        .table-wrapper th { padding: 16px; text-align: left; font-size: 11px; font-weight: 900; color: #BBB; letter-spacing: 1px; }
-        .highlight-row td { padding: 24px 16px; font-weight: 900; font-size: 15px; }
-        .about-card { padding: 60px 24px; text-align: center; }
-        .about-logo { position: relative; width: 120px; height: 90px; margin: 0 auto 28px; }
-        .disclaimer { text-align: center; margin-top: 80px; opacity: 0.2; font-size: 10px; font-weight: 700; }
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 1000; }
-        .bottom-sheet { border-radius: 32px 32px 0 0; box-shadow: 0 -10px 40px rgba(0,0,0,0.15); touch-action: none; overflow: hidden; }
-        .sheet-handle { width: 36px; height: 5px; background: #DDD; border-radius: 10px; margin: 12px auto 32px; cursor: grab; }
-        .sheet-title { font-size: 18px; font-weight: 900; color: #074CA1; margin-bottom: 28px; text-align: center; }
-        .spec-list { background: #F8F9FA; border-radius: 20px; padding: 8px 20px; }
-        .spec-row { display: flex; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid #EEE; font-size: 14px; gap: 40px; }
-        .spec-row:last-child { border-bottom: none; }
-        .spec-label { color: #8E8E93; font-weight: 700; flex-shrink: 0; }
-        .spec-value { color: #1A1A1A; font-weight: 800; text-align: right; word-break: break-all; }
-        .no-underline-link { text-decoration: none !important; color: #074CA1; font-weight: 800; }
-        @keyframes pulse { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(1.4); } 100% { opacity: 1; transform: scale(1); } }
-      `}</style>
     </div>
   );
 }
