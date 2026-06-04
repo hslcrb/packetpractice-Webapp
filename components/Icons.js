@@ -1,31 +1,34 @@
 export const HomeIcon = () => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
-        <path d="M3 9.5L12 3L21 9.5V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V9.5Z" />
-        <path d="M9 21V12H15V21" />
+        <rect x="2" y="3" width="20" height="12" rx="2" ry="2" />
+        <line x1="8" y1="21" x2="16" y2="21" />
+        <line x1="12" y1="17" x2="12" y2="21" />
     </svg>
 );
 
 export const MatchIcon = () => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="12" cy="12" r="10" />
-        <path d="M12 2C12 2 15 5 15 12C15 19 12 22 12 22" />
-        <path d="M12 2C12 2 9 5 9 12C9 19 12 22 12 22" />
-        <path d="M2 12H22" />
+        <rect x="2" y="7" width="20" height="10" rx="1" />
+        <line x1="6" y1="12" x2="10" y2="12" />
+        <line x1="14" y1="12" x2="18" y2="12" />
+        <circle cx="8" cy="12" r="1" fill="currentColor" />
+        <circle cx="16" cy="12" r="1" fill="currentColor" />
     </svg>
 );
 
 export const RankIcon = () => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
-        <path d="M18 20V10" />
-        <path d="M12 20V4" />
-        <path d="M6 20V14" />
+        <circle cx="12" cy="12" r="9" />
+        <line x1="12" y1="3" x2="12" y2="21" />
+        <line x1="3" y1="12" x2="21" y2="12" />
+        <path d="M12 3l3 3M12 3L9 6M12 21l3-3M12 21l-3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3" />
     </svg>
 );
 
 export const MoreIcon = () => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="12" cy="12" r="1" fill="currentColor" stroke="none" />
-        <circle cx="19" cy="12" r="1" fill="currentColor" stroke="none" />
-        <circle cx="5" cy="12" r="1" fill="currentColor" stroke="none" />
+        <circle cx="12" cy="12" r="10" />
+        <line x1="12" y1="16" x2="12" y2="12" />
+        <line x1="12" y1="8" x2="12.01" y2="8" />
     </svg>
 );
