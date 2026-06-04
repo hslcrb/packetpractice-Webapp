@@ -63,13 +63,13 @@
 }
 
 :root {
-  --lions-blue: #074CA1;
+  --lions-blue: #16a34a; /* 초록색 테마 */
   --lions-silver: #C0C0C0;
   --lions-white: #FFFFFF;
-  --glass-white: rgba(255, 255, 255, 0.85);
-  --glass-border: rgba(255, 255, 255, 0.3);
+  --glass-white: rgba(255, 255, 255, 0.9);
+  --glass-border: rgba(22, 163, 74, 0.2);
   --text-dark: #1A1A1A;
-  --text-blue: #074CA1;
+  --text-blue: #16a34a;
 }
 
 * {
@@ -85,7 +85,7 @@
 }
 
 html {
-  background-color: var(--lions-blue);
+  background-color: #14532d; /* 딥그린 배경 */
 }
 
 body {
@@ -325,3 +325,175 @@ p {
   height: 100vh;
   background: white;
 }
+
+/* 터미널 스타일 (정갈한 흰색/회색/검은색 톤, Consolas 폰트) */
+.terminal-box {
+  background-color: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 16px;
+  padding: 16px;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 13px;
+  color: #111827;
+  height: 240px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.03);
+  margin-bottom: 12px;
+}
+
+.terminal-output {
+  flex: 1;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin-bottom: 8px;
+  padding-right: 4px;
+}
+
+/* 스크롤바 커스텀 */
+.terminal-output::-webkit-scrollbar {
+  width: 4px;
+}
+.terminal-output::-webkit-scrollbar-track {
+  background: transparent;
+}
+.terminal-output::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 2px;
+}
+
+.terminal-line {
+  line-height: 1.6;
+  margin-bottom: 3px;
+  color: #374151;
+}
+
+.terminal-line.command {
+  color: #111827;
+  font-weight: 700;
+}
+
+.terminal-line.error {
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+.terminal-line.success {
+  color: #047857;
+  font-weight: 600;
+}
+
+.terminal-line.system {
+  color: #6b7280;
+  font-style: italic;
+}
+
+.terminal-input-row {
+  display: flex;
+  align-items: center;
+  border-top: 1px solid #f3f4f6;
+  padding-top: 8px;
+}
+
+.terminal-prompt {
+  color: #111827;
+  font-weight: 700;
+  margin-right: 6px;
+  user-select: none;
+}
+
+.terminal-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-family: inherit;
+  font-size: inherit;
+  color: #111827;
+  background: transparent;
+  padding: 0;
+}
+
+/* 퀵 패드 */
+.quick-pad {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.quick-btn {
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 8px 4px;
+  font-family: 'Consolas', monospace;
+  font-size: 11px;
+  color: #374151;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.quick-btn:active {
+  background: #e5e7eb;
+  transform: scale(0.95);
+}
+
+/* 가이드 카드 */
+.guide-box {
+  background: #f9fafb;
+  border-left: 4px solid #16a34a;
+  padding: 12px 16px;
+  border-radius: 0 12px 12px 0;
+  margin-bottom: 16px;
+}
+
+.guide-box h4 {
+  font-size: 13px;
+  color: #111827;
+  margin-bottom: 4px;
+  font-weight: 700;
+}
+
+.guide-box p {
+  font-size: 12px;
+  color: #4b5563;
+}
+
+/* PC 설정 폼 */
+.pc-config-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.input-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #4b5563;
+}
+
+.form-input {
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+  color: #111827;
+  outline: none;
+  font-family: 'Consolas', monospace;
+  transition: border-color 0.2s;
+}
+
+.form-input:focus {
+  border-color: #16a34a;
+}
